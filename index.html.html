@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reto Matemático Competitivo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- MathJax para mostrar fórmulas matemáticas -->
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- Estilos -->
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #121212;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    button {
+      font-size: 1.2em;
+      margin: 10px;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    input {
+      font-size: 1.2em;
+      padding: 8px;
+      margin: 10px;
+      width: 250px;
+    }
+    #question {
+      font-size: 1.5em;
+      margin: 20px;
+    }
+    #options button {
+      display: block;
+      margin: 10px auto;
+      width: 200px;
+    }
+    #status {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    #score, #timer {
+      font-size: 1.2em;
+      margin: 10px;
+    }
+    #introScreen, #countdown, #gameArea {
+      display: none;
+    }
+    #countdown {
+      font-size: 4em;
+      margin-top: 40px;
+    }
+    #history {
+      margin-top: 40px;
+      display: none;
+    }
+    #historyList {
+      list-style: none;
+      padding: 0;
+    }
+    #historyList li {
+      margin: 5px 0;
+      font-size: 1em;
+    }
+    #historialAviso {
+      margin-top: 20px;
+      font-size: 0.95em;
+      color: #ccc;
+    }
+    .option-btn {
+      transition: background-color 0.25s ease, color 0.25s ease;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      background: #222;
+      color: #fff;
+    }
+    .option-btn.option-correct {
+      background: #2ecc71 !important;
+      color: #06260a !important;
+    }
+    .option-btn.option-wrong {
+      background: #e74c3c !important;
+      color: #2a0b06 !important;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏆 Reto Matemático Competitivo</h1>
+
+  <!-- Pantalla de inicio -->
+  <div id="introScreen">
+    <h2>¿Listo para el reto matemático más intenso? 😈</h2>
+    <h3>¿Cuál es tu nombre? 🧑‍🎓</h3>
+    <input type="text" id="playerName" placeholder="Escribe tu nombre">
+    <button onclick="startCountdown()">¡Estoy listo!</button>
+
+    <div style="margin-top: 40px;">
+      <h3>¿Música para el reto? 🎶</h3>
+      <button onclick="playMusic()">Sí</button>
+      <audio id="challengeMusic" src="Gonna Fly Now.mp3" preload="auto"></audio>
+    </div>
+  </div>
+
+  <!-- Cuenta regresiva -->
+  <div id="countdown">3</div>
+
+  <!-- Área de juego -->
+  <div id="gameArea">
+    <div id="score">Puntaje: 0</div>
+    <div id="timer">Tiempo: 120s | Meta: 100 pts</div>
+    <div id="question">Cargando pregunta...</div>
+    <div id="options"></div>
+    <div id="status"></div>
+  </div>
+
+  <!-- Historial -->
+  <div id="history">
+    <h3>📜 Historial de partidas</h3>
+    <ul id="historyList"></ul>
+    <button onclick="borrarHistorial()">🧹 Borrar historial</button>
+
+    <div id="newRound" style="display:none; margin-top:20px;">
+      <button id="otraRondaBtn" onclick="otraRonda()">¿Otra ronda?</button>
+    </div>
+
+    <div id="historialAviso">
+      ℹ️ El historial se guarda solo por dispositivo. Envía el link a tus amigos y comparen sus mejores puntuaciones.
+    </div>
+  </div>
+
+  <script>
+    let score = 0;
+    let timeLeft = 120;
+    let timer;
+    let gameOver = false;
+
+    document.getElementById('introScreen').style.display = 'block';
+
+    function playMusic() {
+      const audio = document.getElementById('challengeMusic');
+      audio.volume = 0.5;
+      audio.play();
+    }
+
+    function startCountdown() {
+      document.getElementById('introScreen').style.display = 'none';
+      const countdownEl = document.getElementById('countdown');
+      countdownEl.style.display = 'block';
+      let count = 3;
+      countdownEl.textContent = count;
+
+      const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdownEl.textContent = count;
+        } else {
+          countdownEl.textContent = '¡GO!';
+          clearInterval(interval);
+          setTimeout(() => {
+            countdownEl.style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+            startGame();
+          }, 1000);
+        }
+      }, 1000);
+    }
+
+    function startGame() {
+      score = 0;
+      timeLeft = 120;
+      gameOver = false;
+      document.getElementById('score').textContent = `Puntaje: ${score}`;
+      document.getElementById('timer').textContent = `Tiempo: ${timeLeft}s | Meta: 100 pts`;
+      document.getElementById('history').style.display = 'none';
+      loadQuestion();
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer').textContent = `Tiempo: ${timeLeft}s | Meta: 100 pts`;
+        if (timeLeft <= 0 || score >= 100) endGame();
+      }, 1000);
+    }
+
+    function generateAdvancedQuestion() {
+      const type = ['derivative', 'integral', 'modular', 'matrix', 'distance'][Math.floor(Math.random() * 5)];
+      let question = '', correct = '', options = [];
+
+      if (type === 'derivative') {
+        const a = Math.floor(Math.random() * 5 + 1);
+        const b = Math.floor(Math.random() * 5 + 1);
+        const n = Math.floor(Math.random() * 3 + 2);
+        question = `¿Cuál es la derivada de \\( f(x) = ${a}x^${n} + ${b}x \\)?`;
+        correct = `${a * n}x^${n - 1}+${b}`;
+        options = [
+          correct,
+          `${a}x^${n}+${b}`,
+          `${a * n}x^${n}+${b}`,
+          `${a * (n - 1)}x^${n - 2}+${b}`
+        ];
+      }
+
+      else if (type === 'integral') {
+        const a = Math.floor(Math.random() * 5 + 1);
+        const n = Math.floor(Math.random() * 3 + 1);
+        question = `Resuelve: \\( \\int ${a}x^${n} dx \\)`;
+        const newExp = n + 1;
+        correct = `${(a / newExp).toFixed(2)}x^${newExp}`;
+        options = [
+          correct,
+          `${a}x^${newExp}`,
+          `${(a / newExp).toFixed(2)}x^${n}`,
+          `${(a * newExp).toFixed(2)}x^${newExp}`
+        ];
+      }
+
+      else if (type === 'modular') {
+        const a = 3 + Math.floor(Math.random() * 5);
+        const m = 7 + Math.floor(Math.random() * 5);
+        let inv = null;
+        for (let x = 1; x < m; x++) {
+          if ((a * x) % m === 1) {
+            inv = x;
+            break;
+          }
+        }
+        if (inv === null) return generateAdvancedQuestion();
+        question = `¿Cuál es el inverso multiplicativo de ${a} módulo ${m}?`;
+        correct = `${inv}`;
+        options = [correct];
+        while (options.length < 4) {
+          const fake = Math.floor(Math.random() * m);
+          if (!options.includes(`${fake}`)) options.push(`${fake}`);
+        }
+      }
+
+      else if (type === 'matrix') {
+        const a = Math.floor(Math.random() * 5 + 1);
+        const b = Math.floor(Math.random() * 5 + 1);
+        const c = Math.floor(Math.random() * 5 + 1);
+        const d = Math.floor(Math.random() * 5 + 1);
+        question = `¿Cuál es el determinante de \\( \\begin{bmatrix}${a} & ${b}\\\\${c} & ${d}\\end{bmatrix} \\)?`;
+        correct = `${a * d - b * c}`;
+        options = [correct];
+        while (options.length < 4) {
+          const fake = Math.floor(Math.random() * 20);
+          if (!options.includes(`${fake}`)) options.push(`${fake}`);
+        }
+      }
+
+      else if (type === 'distance') {
+        const x1 = Math.floor(Math.random() * 10);
+        const y1 = Math.floor(Math.random() * 10);
+        const x2 = x1 + Math.floor(Math.random() * 5 + 1);
+        const y2 = y1 + Math.floor(Math.random() * 5 + 1);
+        const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2).toFixed(2);
+        question = `¿Cuál es la distancia entre A(${x1},${y1}) y B(${x2},${y2})?`;
+        correct = dist;
+        options = [correct];
+        while (options.length < 4) {
+          const fake = (parseFloat(dist) + (Math.random() * 4 - 2)).toFixed(2);
+          if (!options.includes(fake)) options.push(fake);
+        }
+      }
+
+      return { q: question, correct, options };
+    }
+
+    function shuffleOptions(options, correct) {
+      const arr = Array.from(new Set([...options]));
+      if (!arr.includes(correct)) arr.push(correct);
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function loadQuestion() {
+      if (gameOver) return;
+      const q = generateAdvancedQuestion();
+      document.getElementById('question').innerHTML = q.q;
+      const shuffled = shuffleOptions(q.options, q.correct);
+      const container = document.getElementById('options');
+      container.innerHTML = '';
+      shuffled.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = opt;
+        btn.dataset.value = opt;
+        btn.onclick = (e) => checkAnswer(e.currentTarget, q.correct);
+        container.appendChild(btn);
+      });
+      if (window.MathJax && MathJax.typeset) MathJax.typeset();
+    }
+
+    function checkAnswer(selected, correct) {
+      if (gameOver) return;
+      const status = document.getElementById('status');
+      const optionButtons = document.querySelectorAll('.option-btn');
+      optionButtons.forEach(b => b.disabled = true);
+
+      const selectedValue = selected.dataset ? selected.dataset.value : selected;
+      if (selectedValue === correct) {
+        score++;
+        document.getElementById('score').textContent = `Puntaje: ${score}`;
+        selected.classList.add('option-correct');
+        status.textContent = "✅ ¡Correcto!";
+      } else {
+        timeLeft = Math.max(0, timeLeft - 5);
+        selected.classList.add('option-wrong');
+        optionButtons.forEach(b => {
+          if (b.dataset.value === correct) b.classList.add('option-correct');
+        });
+        status.textContent = `❌ Incorrecto (-5s)`;
+      }
+
+      setTimeout(() => {
+        status.textContent = '';
+        optionButtons.forEach(b => { b.classList.remove('option-correct', 'option-wrong'); b.disabled = false; });
+        loadQuestion();
+      }, 900);
+    }
+
+    function endGame() {
+      gameOver = true;
+      clearInterval(timer);
+      const music = document.getElementById('challengeMusic');
+      if (music) { music.pause(); music.currentTime = 0; }
+      const msg = score >= 100 ? "🎉 ¡Meta alcanzada!" : "⏱️ Tiempo agotado";
+      document.getElementById('question').textContent = `${msg} Puntaje final: ${score}`;
+      document.getElementById('options').innerHTML = '';
+      document.getElementById('status').textContent = '';
+
+      const name = document.getElementById('playerName').value.trim() || "Sin nombre";
+      const record = { nombre: name, puntaje: score };
+
+      let records = JSON.parse(localStorage.getItem("historial")) || [];
+      records.push(record);
+      localStorage.setItem("historial", JSON.stringify(records));
+      mostrarHistorial();
+      document.getElementById('newRound').style.display = 'block';
+    }
+
+    function mostrarHistorial() {
+      const records = JSON.parse(localStorage.getItem("historial")) || [];
+      records.sort((a, b) => b.puntaje - a.puntaje);
+      const list = document.getElementById("historyList");
+      list.innerHTML = '';
+      records.slice(0, 10).forEach((r, i) => {
+        const item = document.createElement("li");
+        item.textContent = `#${i + 1} — ${r.nombre} — ${r.puntaje} pts`;
+        list.appendChild(item);
+      });
+      document.getElementById("history").style.display = 'block';
+    }
+
+    function borrarHistorial() {
+      localStorage.removeItem('historial');
+      const list = document.getElementById('historyList');
+      if (list) list.innerHTML = '';
+      const borrarBtn = document.querySelector('#history > button[onclick="borrarHistorial()"]');
+      if (borrarBtn) borrarBtn.style.display = 'none';
+    }
+
+    function otraRonda() {
+      clearInterval(timer);
+      gameOver = false;
+      document.getElementById('gameArea').style.display = 'none';
+      document.getElementById('history').style.display = 'none';
+      document.getElementById('newRound').style.display = 'none';
+
+      // 🧹 Limpia el campo del nombre del jugador
+      document.getElementById('playerName').value = '';
+
+      // Mostrar pantalla de inicio vacía
+      document.getElementById('introScreen').style.display = 'block';
+
+      // Reset del temporizador
+      document.getElementById('timer').textContent = `Tiempo: ${timeLeft}s | Meta: 100 pts`;
+    }
+  </script>
+
+</body>
+</html>
